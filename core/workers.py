@@ -85,3 +85,62 @@ class ZeroconfThread(QThread):
 
     def stop(self):
         self._running = False
+
+
+class ConnectNotifier(QObject):
+    """供 zeroconf 回调跨线程通知主线程：发现连接服务（配对后设备的 adb connect 端口）。"""
+    connect_found = pyqtSignal(str, int)  # host, port
+
+
+class ConnectListener:
+    """mDNS 监听 _adb-tls-connect，发现后通过 notifier 发出 host/port（用于 adb connect）。"""
+    def __init__(self, notifier: ConnectNotifier):
+        self.notifier = notifier
+
+    def add_service(self, zeroconf, service_type, name):
+        info = zeroconf.get_service_info(service_type, name)
+        if not info or not info.addresses:
+            return
+        host = socket.inet_ntoa(info.addresses[0])
+        port = info.port
+        self.notifier.connect_found.emit(host, port)
+
+    def remove_service(self, zeroconf, service_type, name):
+        pass
+
+    def update_service(self, zeroconf, service_type, name):
+        pass
+
+
+class ZeroconfConnectThread(QThread):
+    """在后台运行 zeroconf 监听连接服务 _adb-tls-connect，发现后由 notifier 发 host/port。"""
+    def __init__(self, notifier: ConnectNotifier):
+        super().__init__()
+        self.notifier = notifier
+        self._running = True
+        self._zc = None
+
+    def run(self):
+        try:
+            from zeroconf import Zeroconf, ServiceBrowser
+            self._zc = Zeroconf()
+            listener = ConnectListener(self.notifier)
+            ServiceBrowser(
+                self._zc,
+                "_adb-tls-connect._tcp.local.",
+                listener,
+            )
+            while self._running:
+                self.msleep(300)
+        except Exception:
+            pass
+        finally:
+            if self._zc is not None:
+                try:
+                    self._zc.close()
+                except Exception:
+                    pass
+                self._zc = None
+
+    def stop(self):
+        self._running = False
