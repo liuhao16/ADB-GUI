@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """主窗口内功能块：设备栏、快捷操作、Shell 单行、输出区。"""
 
+from datetime import datetime
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget,
@@ -16,7 +17,7 @@ from PyQt6.QtWidgets import (
     QTextEdit,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QTextCursor
 
 
 class StyledComboBox(QComboBox):
@@ -193,18 +194,29 @@ class OutputPanel(QWidget):
         self._status_label.setObjectName("statusLabel")
         layout.addWidget(self._status_label)
 
+    def _prepend_text(self, text: str):
+        """在输出框顶部插入文本（倒序显示）。"""
+        cursor = self.output.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.Start)
+        cursor.insertText(text + "\n")
+        # 保持滚动在顶部
+        self.output.moveCursor(QTextCursor.MoveOperation.Start)
+
     def append_output(self, code: int, out: str, err: str):
-        self.output.append("---")
+        # 倒序插入：先插入最后显示的内容
+        lines = []
+        lines.append("---")
         if out:
-            self.output.append(out.rstrip())
+            lines.append(out.rstrip())
         if err:
-            self.output.append(f"[stderr] {err.rstrip()}")
-        self.output.append(f"[退出码: {code}]")
-        self.output.ensureCursorVisible()
+            lines.append(f"[stderr] {err.rstrip()}")
+        lines.append(f"[退出码: {code}]")
+        # 反转顺序，因为每次都是插入到顶部
+        self._prepend_text("\n".join(reversed(lines)))
 
     def append_step(self, msg: str):
-        self.output.append(f"[步骤] {msg}")
-        self.output.ensureCursorVisible()
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        self._prepend_text(f"[{timestamp}] {msg}")
 
     def set_status(self, msg: str):
         self._status_label.setText(msg)

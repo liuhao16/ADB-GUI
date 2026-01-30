@@ -238,7 +238,7 @@ def apply_modern_theme(app: QApplication) -> None:
             border-radius: {RADIUS_SM};
             background: {MUTED};
             color: {FOREGROUND};
-            padding: 10px 12px;
+            padding: 6px 8px;
             selection-background-color: {PRIMARY};
             selection-color: {PRIMARY_FOREGROUND};
         }}
