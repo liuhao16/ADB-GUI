@@ -136,6 +136,58 @@ def pull(device: str, remote: str, local: str, timeout: int = 60) -> tuple[int, 
     return run_adb("pull", remote, local, device=device, timeout=timeout)
 
 
+def list_device_path(device: str, path: str) -> tuple[list[dict], Optional[str]]:
+    """
+    列出设备上指定路径下的目录和文件。
+    兼容不同 Android 的 ls -la 输出（列数可能为 7/8/9 等），并正确处理符号链接名称。
+    :param device: 设备序列号
+    :param path: 设备上的绝对路径，如 /sdcard 或 /storage/emulated/0
+    :return: (entries, error)。entries 为 [{"name": str, "is_dir": bool, "target": str|None}, ...]；error 非空表示失败原因。
+    """
+    path = path.strip().rstrip("/") or "/"
+    code, out, err = run_adb("shell", "ls", "-la", path, device=device, timeout=15)
+    if code != 0:
+        return [], err.strip() or out.strip() or "无法访问该路径"
+    entries = []
+    lines = out.strip().splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("total "):
+            continue
+        # 兼容不同列数：标准为 perm nlink user group size month day time name；部分设备无 group 则 8 列。
+        parts = line.split()
+        if len(parts) < 8:
+            if len(parts) >= 2 and parts[-1] in (".", ".."):
+                if parts[-1] == "..":
+                    entries.append({"name": "..", "is_dir": True, "target": None})
+                continue
+            continue
+        perm = parts[0]
+        if perm[0] not in ("d", "l", "-"):
+            continue
+        if len(parts) >= 9:
+            raw_name = " ".join(parts[8:]).strip()
+        else:
+            raw_name = parts[7] if len(parts) >= 8 else ""
+        if " -> " in raw_name:
+            name, target = raw_name.split(" -> ", 1)
+            name = name.strip()
+            target = target.strip()
+        else:
+            name = raw_name
+            target = None
+        if name in (".", ".."):
+            if name == "..":
+                entries.append({"name": "..", "is_dir": True, "target": None})
+            continue
+        # d=目录，l=符号链接（有 target 时点击进入目标路径）
+        is_dir = perm.startswith("d") or perm.startswith("l")
+        entries.append({"name": name, "is_dir": is_dir, "target": target})
+    if path != "/" and not any(e["name"] == ".." for e in entries):
+        entries.insert(0, {"name": "..", "is_dir": True, "target": None})
+    return entries, None
+
+
 def logcat(device: str, clear: bool = False, max_lines: Optional[int] = None) -> tuple[int, str, str]:
     """获取 logcat。clear 先清空；max_lines 限制行数。"""
     if clear:

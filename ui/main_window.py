@@ -29,7 +29,7 @@ from core.utils import (
 )
 from ui.widgets import CustomMessageBox, CustomInputDialog
 from ui.panels import DeviceBarPanel, QuickActionsPanel, ShellPanel, OutputPanel
-from ui.dialogs import PairingDialog, ManualConnectDialog
+from ui.dialogs import PairingDialog, ManualConnectDialog, DevicePathDialog
 
 
 class MainWindow(QMainWindow):
@@ -236,24 +236,38 @@ class MainWindow(QMainWindow):
         if not local:
             self._log_step("已取消推送")
             return
-        remote = f"/sdcard/{Path(local).name}"
+        self._log_step("选择设备上的目标路径（文件夹）…")
+        dlg = DevicePathDialog(self, self._device(), initial_path="/storage/emulated/0", mode="push")
+        dlg.exec()
+        remote_dir = dlg.selected_path()
+        if not remote_dir:
+            self._log_step("已取消推送")
+            return
+        remote = f"{remote_dir.rstrip('/')}/{Path(local).name}"
         self._log_step(f"推送文件: {local} -> {remote}")
         self._run_worker(push, self._device(), local, remote)
 
     def _on_pull(self):
         if not self._ensure_device():
             return
-        self._log_step("输入设备路径并选择保存位置…")
-        remote, ok = CustomInputDialog.getText(self, "拉取文件", "设备路径 (如 /sdcard/xxx):")
-        if not ok or not remote.strip():
+        self._log_step("选择设备上的文件或文件夹…")
+        dlg = DevicePathDialog(self, self._device(), initial_path="/storage/emulated/0", mode="pull")
+        dlg.exec()
+        remote = dlg.selected_path()
+        if not remote:
             self._log_step("已取消拉取")
             return
-        local, _ = QFileDialog.getSaveFileName(self, "保存到", Path(remote).name, "所有文件 (*)")
+        default_name = Path(remote).name or "device_file"
+        self._log_step("选择保存到本地的位置…")
+        if dlg.selected_is_dir():
+            local = QFileDialog.getExistingDirectory(self, "选择保存到的文件夹", default_name)
+        else:
+            local, _ = QFileDialog.getSaveFileName(self, "保存到", default_name, "所有文件 (*)")
         if not local:
             self._log_step("已取消保存")
             return
-        self._log_step(f"拉取文件: {remote.strip()} -> {local}")
-        self._run_worker(pull, self._device(), remote.strip(), local)
+        self._log_step(f"拉取文件: {remote} -> {local}")
+        self._run_worker(pull, self._device(), remote, local)
 
     def _on_shell_dialog(self):
         if not self._ensure_device():
