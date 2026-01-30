@@ -45,6 +45,7 @@ a = Analysis(
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # 目录模式（onedir）：exe 与依赖在同一文件夹，启动快、无需每次解压
+# contents_directory 必须写在 EXE 里，bootloader 才会按该目录找资源；只写 COLLECT 不生效
 exe = EXE(
     pyz,
     a.scripts,
@@ -64,8 +65,10 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    contents_directory='runtime',  # 打包后资源目录名，默认 _internal；bootloader 据此找资源
 )
 
+# 与 EXE 的 contents_directory 保持一致，COLLECT 才会把文件放进同名子目录
 coll = COLLECT(
     exe,
     a.binaries,
@@ -74,5 +77,6 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='GUI-ADB',
+    name='ADB-GUI',
+    contents_directory='runtime',
 )
