@@ -40,6 +40,7 @@ exe = EXE(
     exclude_binaries=True,
     name='GUI-ADB',
     debug=False,
+    icon='adb.png',
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
