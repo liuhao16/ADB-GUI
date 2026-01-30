@@ -18,6 +18,20 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## 打包成 exe
+
+使用 PyInstaller 打包为**目录模式**（onedir），启动快、无需每次解压；已包含 platform-tools，无需额外拷贝 adb。
+
+```bash
+# 安装依赖（含 PyInstaller）
+pip install -r requirements.txt
+
+# 打包（在项目根目录执行）
+python -m PyInstaller GUI-ADB.spec
+```
+
+打包完成后，得到文件夹 `dist/GUI-ADB/`，运行其中的 `GUI-ADB.exe` 即可。分发时需整个文件夹一起拷贝。
+
 ## 功能说明
 
 | 功能       | 说明                           |
@@ -50,6 +64,7 @@ python main.py
 GUI-ADB/
 ├── main.py           # PyQt6 主界面与快捷操作
 ├── adb_helper.py     # ADB 命令封装（优先使用本目录下 platform-tools/adb）
+├── GUI-ADB.spec      # PyInstaller 打包配置
 ├── platform-tools/   # Android SDK platform-tools（内含 adb.exe 等）
 ├── requirements.txt
 └── README.md

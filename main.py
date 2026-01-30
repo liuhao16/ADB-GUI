@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
 )
 import os
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject, QTimer, QPoint
-from PyQt6.QtGui import QFont, QPixmap, QImage, QIntValidator, QMouseEvent
+from PyQt6.QtGui import QFont, QPixmap, QImage, QIntValidator, QMouseEvent, QGuiApplication
 
 from adb_helper import (
     get_devices,
@@ -1267,8 +1267,32 @@ class MainWindow(QMainWindow):
         self._run_worker(shell, self._device, cmd)
 
 
+def _enable_high_dpi():
+    """高 DPI 支持：Windows 下声明 DPI 感知，并设置 Qt 缩放策略。"""
+    if os.name == "nt":
+        try:
+            import ctypes
+            # Per-Monitor V2：避免系统对窗口做位图缩放导致模糊
+            DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
+            ctypes.windll.user32.SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
+        except Exception:
+            try:
+                from ctypes import windll
+                windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
+            except Exception:
+                pass
+    # 使用整数缩放比例（Round），高分辨率下更清晰，避免 125%/150% 分数缩放带来的模糊
+    try:
+        QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.Round
+        )
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
     import sys
+    _enable_high_dpi()
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     apply_modern_theme(app)

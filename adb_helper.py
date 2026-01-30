@@ -4,11 +4,20 @@
 import os
 import subprocess
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional
 
-# 项目内 platform-tools 目录（与 adb_helper.py 同级的 platform-tools）
-_PLATFORM_TOOLS_DIR = Path(__file__).resolve().parent / "platform-tools"
+
+def _get_base_dir() -> Path:
+    """开发时用脚本所在目录，打包成 exe 后用 PyInstaller 解压目录。"""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent
+
+
+# 项目内 platform-tools 目录（开发时与 adb_helper.py 同级，打包后在 exe 同目录）
+_PLATFORM_TOOLS_DIR = _get_base_dir() / "platform-tools"
 _ADB_NAME = "adb.exe" if os.name == "nt" else "adb"
 
 
@@ -35,6 +44,8 @@ def run_adb(*args: str, device: Optional[str] = None, timeout: int = 30) -> tupl
     if device:
         cmd.extend(["-s", device])
     cmd.extend(args)
+    # Windows 下禁止 adb 子进程弹出控制台，避免黑框一闪而过
+    creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     try:
         result = subprocess.run(
             cmd,
@@ -43,6 +54,7 @@ def run_adb(*args: str, device: Optional[str] = None, timeout: int = 30) -> tupl
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
+            creationflags=creationflags,
         )
         return result.returncode, result.stdout or "", result.stderr or ""
     except subprocess.TimeoutExpired:

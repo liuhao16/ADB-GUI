@@ -1,3 +1,6 @@
 PyQt6>=6.6.0
 zeroconf>=0.131.0
 qrcode[pil]>=7.4.0
+
+# 打包成 exe 时安装
+pyinstaller>=6.0.0
