@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller 打包配置：python -m PyInstaller GUI-ADB.spec
+# 打包前请先运行 python build_icon.py 生成 adb.ico（Windows exe 图标必须用 .ico）
 
 block_cipher = None
 
@@ -9,7 +10,11 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('platform-tools', 'platform-tools')],
+    datas=[
+        ('platform-tools', 'platform-tools'),
+        ('adb.png', '.'),
+        ('adb.ico', '.'),
+    ],
     hiddenimports=[
         'PyQt6.QtCore',
         'PyQt6.QtGui',
@@ -40,7 +45,7 @@ exe = EXE(
     exclude_binaries=True,
     name='GUI-ADB',
     debug=False,
-    icon='adb.png',
+    icon='adb.ico',
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,

@@ -22,6 +22,15 @@ python main.py
 
 使用 PyInstaller 打包为**目录模式**（onedir），启动快、无需每次解压；已包含 platform-tools，无需额外拷贝 adb。
 
+**exe 图标**：Windows 下 exe 文件图标需使用 .ico 格式。打包前请先生成 `adb.ico`：
+
+```bash
+# 生成 exe 图标（需已安装 Pillow：pip install Pillow）
+python build_icon.py
+```
+
+然后打包：
+
 ```bash
 # 安装依赖（含 PyInstaller）
 pip install -r requirements.txt
