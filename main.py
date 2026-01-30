@@ -451,9 +451,10 @@ class CustomTitleBar(QWidget):
         layout.setContentsMargins(16, 0, 8, 0)
         layout.setSpacing(0)
 
-        # 标题
+        # 标题（设为鼠标穿透，让父标题栏接收拖动）
         self._title_label = QLabel(title)
         self._title_label.setObjectName("titleLabel")
+        self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout.addWidget(self._title_label)
 
         layout.addStretch()
@@ -949,9 +950,8 @@ class ManualConnectDialog(FramelessDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        # 无边框窗口
+        # 无边框窗口（不设 WA_TranslucentBackground，否则 Windows 下点击会穿透无法拖动）
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMinimumSize(720, 560)
         self.resize(880, 640)
         self._worker = None
@@ -961,12 +961,12 @@ class MainWindow(QMainWindow):
         self._refresh_devices(allow_auto_prompt=True)
 
     def _setup_ui(self):
-        # 外层容器（用于圆角和阴影）
+        # 外层容器：不透明背景，确保标题栏能接收鼠标事件
         container = QWidget()
         container.setObjectName("container")
         container.setStyleSheet("""
             QWidget#container {
-                background: transparent;
+                background: #f1f5f9;
             }
         """)
         self.setCentralWidget(container)
