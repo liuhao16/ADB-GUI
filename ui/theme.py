@@ -164,16 +164,17 @@ def apply_modern_theme(app: QApplication) -> None:
             border: none;
             background: transparent;
         }}
-        /* 弹出层容器（QComboBoxPrivateContainer/QFrame）不画边框，避免淡色直角外框 */
+        /* 弹出层容器：统一直角，避免右下角与其他角不一致 */
         QComboBox QFrame {{
-            border: none;
+            background: {CARD};
+            border: 1px solid {BORDER};
+            border-radius: 0;
             outline: none;
-            background: transparent;
         }}
         QComboBox QAbstractItemView {{
             background: {CARD};
-            border: 1px solid {BORDER};
-            border-radius: {RADIUS};
+            border: none;
+            border-radius: 0;
             padding: 6px;
             outline: none;
             selection-background-color: {PRIMARY};
@@ -187,47 +188,72 @@ def apply_modern_theme(app: QApplication) -> None:
         QComboBox QScrollArea QWidget {{
             border: none;
             outline: none;
+            background: transparent;
         }}
         QComboBox QAbstractItemView::item {{
-            min-height: 32px;
-            height: 32px;
-            padding: 0 10px;
-            margin: 2px 0;
-            border-radius: {RADIUS_SM};
+            min-height: 36px;
+            height: 36px;
+            padding: 0 12px;
+            margin: 1px 4px;
+            border-radius: 0;
             color: {FOREGROUND};
         }}
         QComboBox QAbstractItemView::item:selected {{
             background: {PRIMARY};
             color: {PRIMARY_FOREGROUND};
         }}
-        QComboBox QAbstractItemView::item:hover {{
+        QComboBox QAbstractItemView::item:selected:hover {{
+            background: {PRIMARY};
+            color: {PRIMARY_FOREGROUND};
+        }}
+        QComboBox QAbstractItemView::item:hover:!selected {{
             background: {ACCENT};
             color: {ACCENT_FOREGROUND};
         }}
         QComboBox QListView {{
             background: {CARD};
-            border: 1px solid {BORDER};
-            border-radius: {RADIUS};
+            border: none;
+            border-radius: 0;
             padding: 6px;
             outline: none;
         }}
         QComboBox QListView QScrollBar:vertical {{
-            border: none;
-            border-radius: 4px;
+            background: transparent;
+            width: 8px;
+            margin: 4px 2px 4px 0;
+            border-radius: 0;
+        }}
+        QComboBox QListView QScrollBar::handle:vertical {{
+            background: {BORDER};
+            border-radius: 0;
+            min-height: 32px;
+        }}
+        QComboBox QListView QScrollBar::handle:vertical:hover {{
+            background: {MUTED_FOREGROUND};
+        }}
+        QComboBox QListView QScrollBar::add-line:vertical, QComboBox QListView QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        QComboBox QListView QScrollBar::add-page:vertical, QComboBox QListView QScrollBar::sub-page:vertical {{
+            background: transparent;
         }}
         QComboBox QListView::item {{
-            min-height: 32px;
-            height: 32px;
-            padding: 0 10px;
-            margin: 2px 0;
-            border-radius: {RADIUS_SM};
+            min-height: 36px;
+            height: 36px;
+            padding: 0 12px;
+            margin: 1px 4px;
+            border-radius: 0;
             color: {FOREGROUND};
         }}
         QComboBox QListView::item:selected {{
             background: {PRIMARY};
             color: {PRIMARY_FOREGROUND};
         }}
-        QComboBox QListView::item:hover {{
+        QComboBox QListView::item:selected:hover {{
+            background: {PRIMARY};
+            color: {PRIMARY_FOREGROUND};
+        }}
+        QComboBox QListView::item:hover:!selected {{
             background: {ACCENT};
             color: {ACCENT_FOREGROUND};
         }}

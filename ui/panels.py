@@ -14,26 +14,115 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QGridLayout,
     QLineEdit,
+    QScrollArea,
     QTextEdit,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QTextCursor
 
+from ui.theme import (
+    ACCENT,
+    ACCENT_FOREGROUND,
+    BORDER,
+    CARD,
+    FOREGROUND,
+    MUTED_FOREGROUND,
+    PRIMARY,
+    PRIMARY_FOREGROUND,
+    RADIUS,
+    RADIUS_SM,
+)
+
+
+def _combo_popup_stylesheet() -> str:
+    """弹出层独立窗口用样式，与 theme 中 QComboBox 下拉一致（Windows 下 reparent 后仍生效）。"""
+    return f"""
+        QWidget#comboPopupContainer {{
+            background: {CARD};
+            border: 1px solid {BORDER};
+            border-radius: 0;
+        }}
+        QListView {{
+            background: {CARD};
+            border: none;
+            border-radius: 0;
+            padding: 6px;
+            outline: none;
+        }}
+        QListView QScrollBar:vertical {{
+            background: transparent;
+            width: 8px;
+            margin: 4px 2px 4px 0;
+            border-radius: 0;
+        }}
+        QListView QScrollBar::handle:vertical {{
+            background: {BORDER};
+            border-radius: 0;
+            min-height: 32px;
+        }}
+        QListView QScrollBar::handle:vertical:hover {{
+            background: {MUTED_FOREGROUND};
+        }}
+        QListView QScrollBar::add-line:vertical, QListView QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        QListView QScrollBar::add-page:vertical, QListView QScrollBar::sub-page:vertical {{
+            background: transparent;
+        }}
+        QListView::item {{
+            min-height: 36px;
+            height: 36px;
+            padding: 0 12px;
+            margin: 1px 4px;
+            border-radius: 0;
+            color: {FOREGROUND};
+        }}
+        QListView::item:selected {{
+            background: {PRIMARY};
+            color: {PRIMARY_FOREGROUND};
+        }}
+        QListView::item:selected:hover {{
+            background: {PRIMARY};
+            color: {PRIMARY_FOREGROUND};
+        }}
+        QListView::item:hover:!selected {{
+            background: {ACCENT};
+            color: {ACCENT_FOREGROUND};
+        }}
+    """
+
 
 class StyledComboBox(QComboBox):
-    """下拉无外框，只保留圆角边框，避免“圆角 + 直角外框”错位。"""
+    """下拉直角、统一主题样式；弹出层高度按项数计算，并隐藏顶部三角。"""
+    # 与 theme 中 item 一致：高度 + 上下 margin
+    _ITEM_HEIGHT = 36 + 2 * 2  # 40
+    _LIST_PADDING = 12
+
     def showPopup(self):
         super().showPopup()
-        def make_frameless():
-            popup = self.view().window()
-            if popup and popup != self:
-                popup.setWindowFlags(
-                    Qt.WindowType.Popup
-                    | Qt.WindowType.FramelessWindowHint
-                    | Qt.WindowType.NoDropShadowWindowHint
-                )
-                popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        QTimer.singleShot(0, make_frameless)
+        QTimer.singleShot(0, self._adjust_popup)
+
+    def _adjust_popup(self):
+        view = self.view()
+        popup = view.window() if view else None
+        if not popup or popup == self:
+            return
+        popup.setObjectName("comboPopupContainer")
+        popup.setStyleSheet(_combo_popup_stylesheet())
+        # 按项数设置最小高度，保证至少显示 2 项或全部（不超过 maxVisibleItems）
+        n = self.count()
+        if n > 0:
+            visible = min(n, self.maxVisibleItems())
+            min_h = visible * self._ITEM_HEIGHT + self._LIST_PADDING
+            view.setMinimumHeight(min_h)
+        # 隐藏弹出层顶部用于绘制“三角”的直接子控件（只隐藏非 QScrollArea 的）
+        for child in popup.findChildren(QWidget):
+            if child.parentWidget() != popup:
+                continue
+            if isinstance(child, QScrollArea):
+                continue
+            child.setMaximumHeight(0)
+            child.setVisible(False)
 
 
 class DeviceBarPanel(QWidget):
