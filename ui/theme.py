@@ -258,6 +258,34 @@ def apply_modern_theme(app: QApplication) -> None:
             color: {ACCENT_FOREGROUND};
         }}
 
+        /* ========== 列表（路径选择等，选中与主色一致） ========== */
+        QListWidget {{
+            border: 1px solid {BORDER};
+            border-radius: {RADIUS_SM};
+            background: {CARD};
+            color: {FOREGROUND};
+            padding: 6px;
+            outline: none;
+        }}
+        QListWidget::item {{
+            min-height: 36px;
+            padding: 0 12px;
+            border-radius: 0;
+            color: {FOREGROUND};
+        }}
+        QListWidget::item:selected {{
+            background: {PRIMARY};
+            color: {PRIMARY_FOREGROUND};
+        }}
+        QListWidget::item:selected:hover {{
+            background: {PRIMARY};
+            color: {PRIMARY_FOREGROUND};
+        }}
+        QListWidget::item:hover:!selected {{
+            background: {ACCENT};
+            color: {ACCENT_FOREGROUND};
+        }}
+
         /* ========== 输出区 ========== */
         QTextEdit {{
             border: 1px solid {BORDER};
