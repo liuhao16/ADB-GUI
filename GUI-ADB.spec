@@ -1,8 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller 打包配置：python -m PyInstaller GUI-ADB.spec
+# PyInstaller 打包配置：python -m PyInstaller --clean GUI-ADB.spec
 # 打包前请先运行 python build_icon.py 生成 adb.ico（Windows exe 图标必须用 .ico）
+# 图标不显示时：已关闭 exe 的 UPX，并用 --clean 重新打包
+
+import os
 
 block_cipher = None
+
+# 图标用绝对路径，避免打包时找不到导致 exe 使用默认图标（任务管理器会显示为 Python 默认）
+SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
+ICON_PATH = os.path.join(SPEC_DIR, 'adb.ico')
 
 # 将 platform-tools 整个目录打进包，运行时解压到 _MEIPASS/platform-tools
 # Analysis.datas 需要 (源路径, 目标路径) 的 2 元组列表，不能直接用 Tree()
@@ -45,10 +52,10 @@ exe = EXE(
     exclude_binaries=True,
     name='GUI-ADB',
     debug=False,
-    icon='adb.ico',
+    icon=ICON_PATH,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,  # UPX 会破坏 exe 内嵌的图标资源，导致任务管理器显示默认图标
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
