@@ -173,6 +173,7 @@ class QuickActionsPanel(QWidget):
     reboot_clicked = pyqtSignal()
     push_clicked = pyqtSignal()
     pull_clicked = pyqtSignal()
+    pull_apk_clicked = pyqtSignal()
     shell_dialog_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -190,6 +191,7 @@ class QuickActionsPanel(QWidget):
             ("重启", self.reboot_clicked),
             ("推送文件", self.push_clicked),
             ("拉取文件", self.pull_clicked),
+            ("提取 APK", self.pull_apk_clicked),
             ("自定义 Shell", self.shell_dialog_clicked),
         ]
         row, col = 0, 0

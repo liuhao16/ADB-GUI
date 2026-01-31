@@ -188,6 +188,38 @@ def list_device_path(device: str, path: str) -> tuple[list[dict], Optional[str]]
     return entries, None
 
 
+def get_installed_packages(device: str, include_system: bool = False) -> tuple[int, list[str], str]:
+    """获取已安装的应用包名列表。include_system=False 时仅返回第三方应用(-3)。"""
+    # -3: show only third party packages
+    flags = [] if include_system else ["-3"]
+    code, out, err = run_adb("shell", "pm", "list", "packages", *flags, device=device)
+    if code != 0:
+        return code, [], err
+    
+    packages = []
+    for line in out.strip().splitlines():
+        # output format: "package:com.example.app"
+        line = line.strip()
+        if line.startswith("package:"):
+            packages.append(line.replace("package:", ""))
+    return 0, "\n".join(sorted(packages)), ""
+
+
+def get_package_path(device: str, package: str) -> tuple[int, str, str]:
+    """获取应用的 APK 路径。"""
+    # output format: "package:/data/app/~~.../base.apk"
+    code, out, err = run_adb("shell", "pm", "path", package, device=device)
+    if code != 0:
+        return code, "", err
+    
+    #可能有多个路径（split apk），通常取第一个 base.apk
+    for line in out.strip().splitlines():
+        if line.startswith("package:"):
+            return 0, line.replace("package:", "").strip(), ""
+            
+    return -1, "", "未找到 APK 路径"
+
+
 def logcat(device: str, clear: bool = False, max_lines: Optional[int] = None) -> tuple[int, str, str]:
     """获取 logcat。clear 先清空；max_lines 限制行数。"""
     if clear:

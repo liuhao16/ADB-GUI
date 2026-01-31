@@ -13,6 +13,8 @@ from PyQt6.QtCore import Qt, QTimer
 from adb_helper import (
     get_devices,
     install_apk,
+    get_installed_packages,
+    get_package_path,
     screenshot,
     shell,
     logcat,
@@ -29,7 +31,7 @@ from core.utils import (
 )
 from ui.widgets import CustomMessageBox, CustomInputDialog
 from ui.panels import DeviceBarPanel, QuickActionsPanel, ShellPanel, OutputPanel
-from ui.dialogs import PairingDialog, ManualConnectDialog, DevicePathDialog
+from ui.dialogs import PairingDialog, ManualConnectDialog, DevicePathDialog, AppSelectionDialog
 
 
 class MainWindow(QMainWindow):
@@ -85,6 +87,7 @@ class MainWindow(QMainWindow):
         self._quick_actions.reboot_clicked.connect(self._on_reboot)
         self._quick_actions.push_clicked.connect(self._on_push)
         self._quick_actions.pull_clicked.connect(self._on_pull)
+        self._quick_actions.pull_apk_clicked.connect(self._on_pull_apk)
         self._quick_actions.shell_dialog_clicked.connect(self._on_shell_dialog)
 
         self._shell_panel.shell_requested.connect(self._on_shell_requested)
@@ -160,12 +163,14 @@ class MainWindow(QMainWindow):
             self._log_step(f"手动连接：连接 {payload['host']}:{payload['port']}")
             self._run_worker(connect_only, payload["host"], payload["port"])
 
-    def _run_worker(self, func, *args, **kwargs):
+    def _run_worker(self, func, *args, callback=None, **kwargs):
         if self._worker and self._worker.isRunning():
             self._log_step("请等待当前命令执行完成")
             self._set_status("请等待当前命令执行完成")
             return
         self._worker = Worker(func, *args, **kwargs)
+        if callback:
+             self._worker.finished.connect(callback)
         self._worker.finished.connect(self._on_worker_finished)
         self._worker.start()
         self._log_step("命令执行中…")
@@ -290,3 +295,60 @@ class MainWindow(QMainWindow):
     def _run_shell(self, cmd: str):
         self._log_step(f"执行 Shell: {cmd}")
         self._run_worker(shell, self._device(), cmd)
+
+    def _on_pull_apk(self):
+        if not self._ensure_device():
+            return
+        self._log_step("获取应用列表…")
+        # 传递 callback 处理列表数据，同时 _on_worker_finished 也会被调用来恢复 UI 状态 (device bar enabled)
+        # 注意：_on_worker_finished 也会在 log pane 打印所有 package list，稍微有点乱但也可以接受，
+        # 或者我们可以稍微改造 _on_worker_finished 不打印太长的 output。暂时保持原样。
+        self._run_worker(get_installed_packages, self._device(), callback=self._handle_packages_loaded)
+
+    def _handle_packages_loaded(self, code: int, out: str, err: str):
+        if code != 0:
+            return  # 错误已由 _on_worker_finished 记录
+        
+        packages = [p for p in out.splitlines() if p.strip()]
+        if not packages:
+            self._log_step("并未找到已安装的第三方应用")
+            return
+            
+        dlg = AppSelectionDialog(self, packages)
+        if dlg.exec() == AppSelectionDialog.DialogCode.Accepted:
+            pkg = dlg.selected_package()
+            if pkg:
+                self._log_step(f"已选择应用: {pkg}，正在获取 APK 路径…")
+                # 链式调用：获取路径 -> 下载
+                # 这里不能直接 chain worker，因为 worker 正在这一刻结束。
+                # 由于 _on_worker_finished 信号连接顺序问题，我们稍微延迟一下或者直接开启下一个 worker
+                # PyQt 的信号通常同步调用槽。当前是在 Worker.finished 信号发射中。
+                # 启动新线程应该没问题。
+                self._get_apk_path_and_pull(pkg)
+
+    def _get_apk_path_and_pull(self, package: str):
+        # 我们不能直接用 _run_worker，因为此时前一个 _worker 可能还没被销毁/还在 finish 状态?
+        # 不，Worker 线程已经结束 run。但 `self._worker` 引用还在。
+        # _run_worker 会检查 isRunning。Finished 信号发出时，isRunning 为 False。
+        # 但是为了避免冲突，我们可以用 QTimer.singleShot 0ms 来跳出当前调用栈。
+        QTimer.singleShot(0, lambda: self._run_worker(get_package_path, self._device(), package, callback=lambda c, o, e: self._handle_apk_path(c, o, e, package)))
+
+    def _handle_apk_path(self, code: int, out: str, err: str, package: str):
+        if code != 0:
+            return
+        remote_path = out.strip()
+        if not remote_path:
+            self._log_step("未找到 APK 路径")
+            return
+        
+        self._log_step(f"APK 路径: {remote_path}")
+        default_name = f"{package}.apk"
+        local_path, _ = QFileDialog.getSaveFileName(self, "保存 APK", default_name, "APK (*.apk)")
+        if not local_path:
+            self._log_step("已取消下载")
+            return
+        
+        self._log_step(f"开始下载: {remote_path} -> {local_path}")
+        # 这里同样需要跳出栈以启动第三个 Worker
+        from adb_helper import pull
+        QTimer.singleShot(0, lambda: self._run_worker(pull, self._device(), remote_path, local_path))

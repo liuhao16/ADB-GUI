@@ -5,4 +5,6 @@ from ui.dialogs.pairing_dialog import PairingDialog
 from ui.dialogs.manual_connect_dialog import ManualConnectDialog
 from ui.dialogs.device_path_dialog import DevicePathDialog
 
-__all__ = ["PairingDialog", "ManualConnectDialog", "DevicePathDialog"]
+from ui.dialogs.app_selection_dialog import AppSelectionDialog
+
+__all__ = ["PairingDialog", "ManualConnectDialog", "DevicePathDialog", "AppSelectionDialog"]
