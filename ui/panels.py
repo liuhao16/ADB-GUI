@@ -93,36 +93,18 @@ def _combo_popup_stylesheet() -> str:
 
 
 class StyledComboBox(QComboBox):
-    """下拉直角、统一主题样式；弹出层高度按项数计算，并隐藏顶部三角。"""
-    # 与 theme 中 item 一致：高度 + 上下 margin
-    _ITEM_HEIGHT = 36 + 2 * 2  # 40
-    _LIST_PADDING = 12
+    """
+    下拉直角、统一主题样式。
+    注：原先的 showPopup hack 在跨平台（Linux/macOS）下可能导致弹出层空白或被遮挡，
+    因此移除对内部子控件的强制隐藏操作，回归原生行为，仅通过样式表控制外观。
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setView(QListView(self))
+        # 设置下拉列表的样式
+        self.view().window().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
-    def showPopup(self):
-        super().showPopup()
-        QTimer.singleShot(0, self._adjust_popup)
-
-    def _adjust_popup(self):
-        view = self.view()
-        popup = view.window() if view else None
-        if not popup or popup == self:
-            return
-        popup.setObjectName("comboPopupContainer")
-        popup.setStyleSheet(_combo_popup_stylesheet())
-        # 按项数设置最小高度，保证至少显示 2 项或全部（不超过 maxVisibleItems）
-        n = self.count()
-        if n > 0:
-            visible = min(n, self.maxVisibleItems())
-            min_h = visible * self._ITEM_HEIGHT + self._LIST_PADDING
-            view.setMinimumHeight(min_h)
-        # 隐藏弹出层顶部用于绘制“三角”的直接子控件（只隐藏非 QScrollArea 的）
-        for child in popup.findChildren(QWidget):
-            if child.parentWidget() != popup:
-                continue
-            if isinstance(child, QScrollArea):
-                continue
-            child.setMaximumHeight(0)
-            child.setVisible(False)
+    # 移除 showPopup 的覆写，避免干扰 Linux 下的渲染 behavior
 
 
 class DeviceBarPanel(QWidget):
